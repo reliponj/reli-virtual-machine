@@ -6,6 +6,7 @@
 class Processor {
 private:
     int ZF = 0;
+    int PC = 0;
     std::vector<int> REGISTERS = {0, 0, 0, 0};
 public:
     void setRegister(int address, int value) {
@@ -22,6 +23,14 @@ public:
 
     const int readZeroFlag() {
         return ZF;
+    }
+
+    void setInstructionPointer(int value) {
+        PC = value;
+    }
+
+    const int readInstructionPointer() {
+        return PC;
     }
 };
 
@@ -77,6 +86,37 @@ public:
     }
 };
 
+class JMP : public Command {
+public:
+    int ptr1;
+
+    JMP(int ptr1) : ptr1(ptr1) {}
+
+    void execute(Processor& processor) override {
+        processor.setInstructionPointer(ptr1);
+    }
+};
+
+class JZ : public JMP {
+public:
+    using JMP::JMP;
+    void execute(Processor& processor) override {
+        if (processor.readZeroFlag()) {
+            processor.setInstructionPointer(ptr1);
+        }
+    }
+};
+
+class JNZ : public JMP {
+public:
+    using JMP::JMP;
+    void execute(Processor& processor) override {
+        if (!processor.readZeroFlag()) {
+            processor.setInstructionPointer(ptr1);
+        }
+    }
+};
+
 class VirtualMachine {
 private:
     Processor processor;
@@ -88,8 +128,9 @@ public:
     };
 
     void run() {
-        for (auto& cmd : program) {
-            cmd->execute(processor);
+        while (processor.readInstructionPointer() < program.size()) {
+            program.at(processor.readInstructionPointer())->execute(processor);
+            processor.setInstructionPointer(processor.readInstructionPointer() + 1);
         }
     };
 };
@@ -100,6 +141,8 @@ int main() {
     program.push_back(std::make_unique<MOV>(1, 30));
     program.push_back(std::make_unique<ADD>(0, 0, 1));
     program.push_back(std::make_unique<PRINT>(0));
+    program.push_back(std::make_unique<CMP>(0, 1));
+    program.push_back(std::make_unique<JZ>(1));
 
     VirtualMachine vm(std::move(program));
     vm.run();
