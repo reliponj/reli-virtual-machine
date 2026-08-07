@@ -1,28 +1,85 @@
 #include <vector>
 #include <optional>
 #include <iostream>
+#include <variant>
 
-enum class Code {
-    MOV, ADD, PRINT
+class Processor {
+private:
+    int ZF = 0;
+    std::vector<int> REGISTERS = {0, 0, 0, 0};
+public:
+    void setRegister(int address, int value) {
+        REGISTERS[address] = value;
+    }
+
+    int readRegister(int address) {
+        return REGISTERS[address];
+    }
+
+    void setZeroFlag(bool value) {
+        ZF = value ? 1 : 0;
+    }
+
+    int readZeroFlag() {
+        return ZF;
+    }
 };
 
 class Command {
 public:
-    Code code;
-    int arg1;
-    std::optional<int> arg2;
+    virtual void execute(Processor &processor) = 0;
+    virtual ~Command() = default;
+};
 
-    Command(Code code, int arg1, std::optional<int> arg2 = std::nullopt) {
-        this->code = code;
-        this->arg1 = arg1;
-        this->arg2 = arg2;
+class MOV : public Command {
+public:
+    int reg1;
+    int val1;
+
+    MOV(int reg1, int val1) : reg1(reg1), val1(val1) {}
+
+    void execute(Processor& processor) {
+        processor.setRegister(reg1, val1);
+    }
+};
+
+class ADD : public Command {
+public:
+    int reg1, reg2, reg3;
+
+    ADD(int reg1, int reg2, int reg3) : reg1(reg1), reg2(reg2), reg3(reg3) {}
+
+    void execute(Processor& processor) {
+        int result = processor.readRegister(reg2) + processor.readRegister(reg3);
+        processor.setRegister(reg1, result);
+    }
+};
+
+class PRINT : public Command {
+public:
+    int reg1;
+
+    PRINT(int reg1) : reg1(reg1) {}
+
+    void execute(Processor& processor) {
+        std::cout << processor.readRegister(reg1) << std::endl;
+    }
+};
+
+class CMP : public Command {
+public:
+    int reg1, reg2;
+
+    CMP(int reg1, int reg2) : reg1(reg1), reg2(reg2) {}
+
+    void execute(Processor& processor) {
+        processor.setZeroFlag(processor.readRegister(reg1) - processor.readRegister(reg2) == 0);
     }
 };
 
 class VirtualMachine {
 private:
-    std::vector<int> REGISTERS = {0, 0, 0, 0};
-    int ADD_COMMAND_REGISTER = 0;
+    Processor processor;
 public:
     std::vector<Command> program;
 
@@ -32,33 +89,17 @@ public:
 
     void run() {
         for (int i = 0; i < this->program.size(); i++) {
-            process(program[i]);
+            program[i].execute(processor);
         }
     };
-
-    void process(Command command) {
-        Code code = command.code;
-        int arg1 = command.arg1;
-        std::optional<int> arg2 = command.arg2;
-
-        if (code == Code::MOV) {
-            if (arg2.has_value())
-            this->REGISTERS[arg1] = arg2.value();
-        } else if (code == Code::ADD) {
-            if (arg2.has_value())
-            this->REGISTERS[ADD_COMMAND_REGISTER] = this->REGISTERS[arg1] + this->REGISTERS[arg2.value()];
-        } else if (code == Code::PRINT) {
-            std::cout << this->REGISTERS[arg1] << std::endl;
-        }
-    }
 };
 
 int main() {
     std::vector<Command> program = {
-        Command(Code::MOV, 0, 10),
-        Command(Code::MOV, 1, 30),
-        Command(Code::ADD, 0, 1),
-        Command(Code::PRINT, 0),
+        MOV(0, 10),
+        MOV(1, 30),
+        ADD(0, 0, 1),
+        PRINT(0),
     };
     VirtualMachine vm = VirtualMachine(program);
     vm.run();
