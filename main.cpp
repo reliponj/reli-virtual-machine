@@ -12,7 +12,7 @@ public:
         REGISTERS[address] = value;
     }
 
-    int readRegister(int address) {
+    const int readRegister(int address) {
         return REGISTERS[address];
     }
 
@@ -20,7 +20,7 @@ public:
         ZF = value ? 1 : 0;
     }
 
-    int readZeroFlag() {
+    const int readZeroFlag() {
         return ZF;
     }
 };
@@ -38,7 +38,7 @@ public:
 
     MOV(int reg1, int val1) : reg1(reg1), val1(val1) {}
 
-    void execute(Processor& processor) {
+    void execute(Processor& processor) override {
         processor.setRegister(reg1, val1);
     }
 };
@@ -49,7 +49,7 @@ public:
 
     ADD(int reg1, int reg2, int reg3) : reg1(reg1), reg2(reg2), reg3(reg3) {}
 
-    void execute(Processor& processor) {
+    void execute(Processor& processor) override {
         int result = processor.readRegister(reg2) + processor.readRegister(reg3);
         processor.setRegister(reg1, result);
     }
@@ -61,7 +61,7 @@ public:
 
     PRINT(int reg1) : reg1(reg1) {}
 
-    void execute(Processor& processor) {
+    void execute(Processor& processor) override {
         std::cout << processor.readRegister(reg1) << std::endl;
     }
 };
@@ -72,7 +72,7 @@ public:
 
     CMP(int reg1, int reg2) : reg1(reg1), reg2(reg2) {}
 
-    void execute(Processor& processor) {
+    void execute(Processor& processor) override {
         processor.setZeroFlag(processor.readRegister(reg1) - processor.readRegister(reg2) == 0);
     }
 };
@@ -81,27 +81,27 @@ class VirtualMachine {
 private:
     Processor processor;
 public:
-    std::vector<Command> program;
+    std::vector<std::unique_ptr<Command>> program;
 
-    VirtualMachine(std::vector<Command> program) {
-        this->program = program;
+    VirtualMachine(std::vector<std::unique_ptr<Command>> program) {
+        this->program = std::move(program);
     };
 
     void run() {
-        for (int i = 0; i < this->program.size(); i++) {
-            program[i].execute(processor);
+        for (auto& cmd : program) {
+            cmd->execute(processor);
         }
     };
 };
 
 int main() {
-    std::vector<Command> program = {
-        MOV(0, 10),
-        MOV(1, 30),
-        ADD(0, 0, 1),
-        PRINT(0),
-    };
-    VirtualMachine vm = VirtualMachine(program);
+    std::vector<std::unique_ptr<Command>> program;
+    program.push_back(std::make_unique<MOV>(0, 10));
+    program.push_back(std::make_unique<MOV>(1, 30));
+    program.push_back(std::make_unique<ADD>(0, 0, 1));
+    program.push_back(std::make_unique<PRINT>(0));
+
+    VirtualMachine vm(std::move(program));
     vm.run();
     return 0;
 }
