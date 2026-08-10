@@ -3,11 +3,31 @@
 #include <iostream>
 #include <variant>
 
+enum class Register {
+    R0,
+    R1,
+    R2,
+    R3,
+    R4,
+    R5,
+    R6,
+    R7
+};
+
 class Processor {
 private:
     int ZF = 0;
     int PC = 0;
-    std::vector<int> REGISTERS = {0, 0, 0, 0};
+    std::unordered_map<Register, int> REGISTERS{
+        {Register::R0, 0},
+        {Register::R1, 0},
+        {Register::R2, 0},
+        {Register::R3, 0},
+        {Register::R4, 0},
+        {Register::R5, 0},
+        {Register::R6, 0},
+        {Register::R7, 0},
+    };
 public:
     void setRegister(int address, int value) {
         REGISTERS[address] = value;
